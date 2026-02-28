@@ -1,94 +1,163 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const User = require("../models/User");
-const Otp = require("../models/Otp");
-const { sendOtpEmail } = require("../utils/email");
-const { signToken } = require("../utils/token");
+const { sendVerificationCodeEmail } = require("../utils/mailer");
 
 const router = express.Router();
 
-function generateCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
+const signToken = (user) => {
+  return jwt.sign(
+    { id: user._id, role: user.role || "user" },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+};
+
+const genCode6 = () => String(Math.floor(100000 + Math.random() * 900000));
+
+const hashCode = (code) =>
+  crypto.createHash("sha256").update(String(code)).digest("hex");
 
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, password } = req.body || {};
-    if (!fullName || !email || !password) return res.status(400).json({ message: "Missing fields" });
-    if (String(password).length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+    const { name, email, password } = req.body;
 
-    const exists = await User.findOne({ email: String(email).toLowerCase() });
-    if (exists) return res.status(409).json({ message: "Email already registered" });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "name, email, password are required" });
+    }
 
-    const passwordHash = await bcrypt.hash(String(password), 10);
+    const emailNorm = String(email).trim().toLowerCase();
+
+    const existing = await User.findOne({ email: emailNorm });
+    if (existing) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const code = genCode6();
+    const codeHash = hashCode(code);
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 минут
+
     const user = await User.create({
-      fullName: String(fullName).trim(),
-      email: String(email).toLowerCase().trim(),
-      passwordHash,
-      role: "student",
-      isEmailVerified: false
+      name,
+      email: emailNorm,
+      password: passwordHash,
+      isVerified: false,
+      verificationCodeHash: codeHash,
+      verificationCodeExpires: expires,
     });
 
-    const code = generateCode();
-    const codeHash = await bcrypt.hash(code, 10);
-    await Otp.deleteMany({ email: user.email });
-    await Otp.create({ email: user.email, codeHash, expiresAt: new Date(Date.now() + 10 * 60 * 1000) });
+    await sendVerificationCodeEmail(emailNorm, code);
 
-    await sendOtpEmail({ to: user.email, code });
-
-    return res.status(201).json({ message: "Registered. Check email for OTP.", userId: user._id });
+    return res.status(201).json({
+      message: "Verification code sent to email",
+      verificationRequired: true,
+      email: emailNorm,
+    });
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: e.message || "Server error" });
   }
 });
 
-router.post("/verify-email", async (req, res) => {
+router.post("/verify-code", async (req, res) => {
   try {
-    const { email, code } = req.body || {};
-    if (!email || !code) return res.status(400).json({ message: "Missing fields" });
+    const { email, code } = req.body;
 
-    const otp = await Otp.findOne({ email: String(email).toLowerCase().trim() });
-    if (!otp) return res.status(400).json({ message: "OTP not found or expired" });
-    if (otp.expiresAt.getTime() < Date.now()) {
-      await Otp.deleteOne({ _id: otp._id });
-      return res.status(400).json({ message: "OTP expired" });
+    if (!email || !code) {
+      return res.status(400).json({ message: "email and code are required" });
     }
 
-    const ok = await bcrypt.compare(String(code), otp.codeHash);
-    if (!ok) return res.status(400).json({ message: "Invalid code" });
+    const emailNorm = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: emailNorm });
 
-    await User.updateOne({ email: otp.email }, { $set: { isEmailVerified: true } });
-    await Otp.deleteOne({ _id: otp._id });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    return res.json({ message: "Email verified" });
+    if (user.isVerified) {
+      const token = signToken(user);
+      return res.json({ message: "Already verified", token });
+    }
+
+    if (!user.verificationCodeHash || !user.verificationCodeExpires) {
+      return res.status(400).json({ message: "No verification code. Please register again." });
+    }
+
+    if (user.verificationCodeExpires.getTime() < Date.now()) {
+      return res.status(400).json({ message: "Code expired. Please resend code." });
+    }
+
+    const incomingHash = hashCode(code);
+    if (incomingHash !== user.verificationCodeHash) {
+      return res.status(400).json({ message: "Invalid code" });
+    }
+
+    user.isVerified = true;
+    user.verificationCodeHash = undefined;
+    user.verificationCodeExpires = undefined;
+    await user.save();
+
+    const token = signToken(user);
+
+    return res.json({ message: "Email verified", token });
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: e.message || "Server error" });
+  }
+});
+
+router.post("/resend-code", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).json({ message: "email is required" });
+
+    const emailNorm = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: emailNorm });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.isVerified) return res.json({ message: "Already verified" });
+
+    const code = genCode6();
+    user.verificationCodeHash = hashCode(code);
+    user.verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    await sendVerificationCodeEmail(emailNorm, code);
+
+    return res.json({ message: "Verification code resent" });
+  } catch (e) {
+    return res.status(500).json({ message: e.message || "Server error" });
   }
 });
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ message: "Missing fields" });
+    const { email, password } = req.body;
 
-    const user = await User.findOne({ email: String(email).toLowerCase().trim() });
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    const emailNorm = String(email || "").trim().toLowerCase();
+    const user = await User.findOne({ email: emailNorm });
 
-    const ok = await bcrypt.compare(String(password), user.passwordHash);
-    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
+    if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
-    if (!user.isEmailVerified) return res.status(403).json({ message: "Email not verified" });
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(400).json({ message: "Invalid email or password" });
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        message: "Email not verified",
+        verificationRequired: true,
+        email: emailNorm,
+      });
+    }
 
     const token = signToken(user);
-    return res.json({
-      token,
-      user: { id: user._id, fullName: user.fullName, email: user.email, role: user.role }
-    });
+
+    return res.json({ token });
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: e.message || "Server error" });
   }
 });
 
