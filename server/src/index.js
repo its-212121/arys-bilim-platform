@@ -4,7 +4,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
 const { connectDB } = require("./db");
-const { CLIENT_ORIGIN, UPLOADS_DIR } = require("./config");
+const { CLIENT_ORIGINS, UPLOADS_DIR } = require("./config");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -15,7 +15,17 @@ const adminRoutes = require("./routes/admin");
 
 const app = express();
 
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (CLIENT_ORIGINS.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS: " + origin));
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
@@ -30,7 +40,6 @@ app.use("/api/portfolio", portfolioRoutes);
 app.use("/api/graduates", graduatesRoutes);
 app.use("/api/admin", adminRoutes);
 
-// global error handler for multer/filter errors
 app.use((err, req, res, next) => {
   if (err) {
     return res.status(400).json({ message: err.message || "Upload error" });
