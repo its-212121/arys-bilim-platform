@@ -92,7 +92,7 @@ router.post("/register", async (req, res) => {
     } catch (e) {
       return res.status(500).json({
         message:
-          "Failed to send verification email. Check SMTP_USER/SMTP_PASS in Render.",
+          "Failed to send verification email. Check SENDGRID_API_KEY and FROM_EMAIL in Render.",
       });
     }
 
