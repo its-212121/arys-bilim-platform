@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const { connectDB } = require("./db");
-const { CLIENT_ORIGIN, UPLOADS_DIR } = require("./config");
+const { UPLOADS_DIR } = require("./config");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -14,15 +14,13 @@ const adminRoutes = require("./routes/admin");
 
 const app = express();
 
-const allowedOrigins = String(process.env.CLIENT_ORIGIN || CLIENT_ORIGIN || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  "https://arys-bilim-platform-1.onrender.com",
+];
 
 const corsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
-    if (allowedOrigins.length === 0) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error(`CORS blocked for origin: ${origin}`));
   },
@@ -49,9 +47,7 @@ app.use("/api/graduates", graduatesRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use((err, req, res, next) => {
-  if (err) {
-    return res.status(400).json({ message: err.message || "Upload error" });
-  }
+  if (err) return res.status(400).json({ message: err.message || "Error" });
   next();
 });
 
