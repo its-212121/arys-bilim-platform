@@ -1,65 +1,112 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, CardBody, CardHeader, ErrorBanner, Input, LinkButton } from "../components/ui";
-import { request } from "../lib/api";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://arys-bilim-platform.onrender.com";
 
 export default function Register() {
-  const nav = useNavigate();
-  const [fullName, setFullName] = useState("");
+  const navigate = useNavigate();
+
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: React.FormEvent) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErr("");
-    setMsg("");
+    setError("");
     setLoading(true);
+
     try {
-      const data = await request<{ message: string }>("/api/auth/register", {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
-        body: JSON.stringify({ fullName, email, password })
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, email, password }),
       });
-      setMsg(data.message);
-      nav("/verify-email", { replace: true, state: { email } as any });
-    } catch (e: any) {
-      setErr(e.message || "Register failed");
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data?.message || "Registration failed");
+        setLoading(false);
+        return;
+      }
+
+      navigate(`/verify-code?email=${encodeURIComponent(data?.email || email)}`);
+    } catch {
+      setError("Failed to connect to server");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Card>
-          <CardHeader title="Register" subtitle="OTP will be sent to your email" />
-          <CardBody>
-            {err ? <div className="mb-4"><ErrorBanner message={err} /></div> : null}
-            {msg ? <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 text-sm">{msg}</div> : null}
-            <form className="space-y-3" onSubmit={onSubmit}>
-              <div>
-                <div className="text-sm text-slate-600 mb-1">Full name</div>
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your name" />
-              </div>
-              <div>
-                <div className="text-sm text-slate-600 mb-1">Email</div>
-                <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-              </div>
-              <div>
-                <div className="text-sm text-slate-600 mb-1">Password</div>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="min 6 chars" />
-              </div>
-              <Button disabled={loading} className="w-full">{loading ? "Loading..." : "Create account"}</Button>
-            </form>
-            <div className="mt-4 flex items-center justify-between">
-              <LinkButton to="/login">Back to login</LinkButton>
-              <LinkButton to="/verify-email">Verify email</LinkButton>
-            </div>
-          </CardBody>
-        </Card>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold mb-1">Create account</h1>
+        <p className="text-sm text-gray-500 mb-4">We will send a verification code to your email</p>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} className="space-y-3">
+          <div>
+            <label className="text-sm text-gray-600">Name</label>
+            <input
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-600">Email</label>
+            <input
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@gmail.com"
+              type="email"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-600">Password</label>
+            <input
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              type="password"
+              required
+            />
+          </div>
+
+          <button
+            disabled={loading}
+            className="w-full rounded-lg bg-blue-600 text-white py-2 font-semibold disabled:opacity-60"
+          >
+            {loading ? "Sending code..." : "Register"}
+          </button>
+        </form>
+
+        <div className="mt-4 flex justify-between text-sm">
+          <button
+            onClick={() => navigate("/login")}
+            className="text-blue-600 hover:underline"
+            type="button"
+          >
+            I already have an account
+          </button>
+        </div>
       </div>
     </div>
   );
