@@ -16,6 +16,7 @@ const app = express();
 
 const allowedOrigins = [
   "https://arys-bilim-platform-1.onrender.com",
+  "https://arys-bilim-platform.onrender.com",
 ];
 
 const corsOptions = {
