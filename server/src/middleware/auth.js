@@ -1,31 +1,25 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
 
-async function auth(req, res, next) {
+const auth = (req, res, next) => {
   try {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    if (!token) return res.status(401).json({ message: "No token" });
 
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(payload.sub).select("-passwordHash");
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
-
-    req.user = user;
+    req.user = payload;
     next();
-  } catch (e) {
-    return res.status(401).json({ message: "Unauthorized" });
+  } catch {
+    return res.status(401).json({ message: "Invalid token" });
   }
-}
+};
 
-function requireRole(...roles) {
-  return (req, res, next) => {
-    const role = req.user?.role;
-    if (!role || !roles.includes(role)) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    next();
-  };
-}
+const requireAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({ message: "Admin only" });
+  }
+  next();
+};
 
-module.exports = { auth, requireRole };
+module.exports = { auth, requireAdmin };
