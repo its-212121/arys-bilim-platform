@@ -2,8 +2,6 @@ import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
-import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import Diary from "./pages/Diary";
 import Profile from "./pages/Profile";
@@ -18,13 +16,8 @@ import PublicPortfolio from "./pages/PublicPortfolio";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-
-      <Route path="/verify-code" element={<VerifyEmail />} />
-      <Route path="/verify-email" element={<Navigate to="/verify-code" replace />} />
 
       <Route path="/portfolio/:userId" element={<PublicPortfolio />} />
 
@@ -101,7 +94,7 @@ export default function App() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
