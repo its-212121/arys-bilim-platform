@@ -1,10 +1,18 @@
-const express = require("express");
-const { auth } = require("../middleware/auth");
+const mongoose = require("mongoose");
 
-const router = express.Router();
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true },
 
-router.get("/me", auth, async (req, res) => {
-  return res.json({ user: req.user });
-});
+    role: { type: String, default: "user" },
 
-module.exports = router;
+    isVerified: { type: Boolean, default: false },
+    verificationCodeHash: { type: String },
+    verificationCodeExpires: { type: Date },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("User", userSchema);
