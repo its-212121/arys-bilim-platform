@@ -16,18 +16,17 @@ const signToken = (user) => {
 };
 
 const genCode6 = () => String(Math.floor(100000 + Math.random() * 900000));
-
 const hashCode = (code) =>
   crypto.createHash("sha256").update(String(code)).digest("hex");
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, fullName, email, password } = req.body;
 
-    if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "name, email, password are required" });
+    const actualName = (fullName || name || "").trim();
+
+    if (!actualName || !email || !password) {
+      return res.status(400).json({ message: "name, email, password are required" });
     }
 
     const emailNorm = String(email).trim().toLowerCase();
@@ -42,25 +41,18 @@ router.post("/register", async (req, res) => {
     const existing = await User.findOne({ email: emailNorm });
 
     if (existing) {
-      if (existing.isVerified) {
+      if (existing.isEmailVerified) {
         return res.status(400).json({ message: "Email already exists" });
       }
 
-      existing.name = name;
-      existing.password = passwordHash;
-      existing.isVerified = false;
+      existing.fullName = actualName;
+      existing.passwordHash = passwordHash;
+      existing.isEmailVerified = false;
       existing.verificationCodeHash = codeHash;
       existing.verificationCodeExpires = expires;
       await existing.save();
 
-      try {
-        await sendVerificationCodeEmail(emailNorm, code);
-      } catch (e) {
-        return res.status(500).json({
-          message:
-            "SMTP is not configured or email sending failed. Set SMTP_USER/SMTP_PASS in Render.",
-        });
-      }
+      await sendVerificationCodeEmail(emailNorm, code);
 
       return res.status(200).json({
         message: "Verification code sent to email",
@@ -70,22 +62,16 @@ router.post("/register", async (req, res) => {
     }
 
     await User.create({
-      name,
+      fullName: actualName,
       email: emailNorm,
-      password: passwordHash,
-      isVerified: false,
+      passwordHash,
+      role: "student",
+      isEmailVerified: false,
       verificationCodeHash: codeHash,
       verificationCodeExpires: expires,
     });
 
-    try {
-      await sendVerificationCodeEmail(emailNorm, code);
-    } catch (e) {
-      return res.status(500).json({
-        message:
-          "SMTP is not configured or email sending failed. Set SMTP_USER/SMTP_PASS in Render.",
-      });
-    }
+    await sendVerificationCodeEmail(emailNorm, code);
 
     return res.status(201).json({
       message: "Verification code sent to email",
@@ -110,21 +96,17 @@ router.post("/verify-code", async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.isVerified) {
+    if (user.isEmailVerified) {
       const token = signToken(user);
       return res.json({ message: "Already verified", token });
     }
 
     if (!user.verificationCodeHash || !user.verificationCodeExpires) {
-      return res
-        .status(400)
-        .json({ message: "No verification code. Please register again." });
+      return res.status(400).json({ message: "No verification code. Please register again." });
     }
 
     if (user.verificationCodeExpires.getTime() < Date.now()) {
-      return res
-        .status(400)
-        .json({ message: "Code expired. Please resend code." });
+      return res.status(400).json({ message: "Code expired. Please resend code." });
     }
 
     const incomingHash = hashCode(code);
@@ -132,7 +114,7 @@ router.post("/verify-code", async (req, res) => {
       return res.status(400).json({ message: "Invalid code" });
     }
 
-    user.isVerified = true;
+    user.isEmailVerified = true;
     user.verificationCodeHash = undefined;
     user.verificationCodeExpires = undefined;
     await user.save();
@@ -155,21 +137,14 @@ router.post("/resend-code", async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.isVerified) return res.json({ message: "Already verified" });
+    if (user.isEmailVerified) return res.json({ message: "Already verified" });
 
     const code = genCode6();
     user.verificationCodeHash = hashCode(code);
     user.verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    try {
-      await sendVerificationCodeEmail(emailNorm, code);
-    } catch (e) {
-      return res.status(500).json({
-        message:
-          "SMTP is not configured or email sending failed. Set SMTP_USER/SMTP_PASS in Render.",
-      });
-    }
+    await sendVerificationCodeEmail(emailNorm, code);
 
     return res.json({ message: "Verification code resent" });
   } catch (e) {
@@ -184,20 +159,18 @@ router.post("/login", async (req, res) => {
     const emailNorm = String(email || "").trim().toLowerCase();
     const user = await User.findOne({ email: emailNorm });
 
-    if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
-    if (!user.password) {
+    if (!user.passwordHash) {
       return res.status(400).json({
         message: "Account data is broken. Please re-register.",
       });
     }
 
-    const ok = await bcrypt.compare(password, user.password);
+    const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return res.status(400).json({ message: "Invalid email or password" });
 
-    if (!user.isVerified) {
+    if (!user.isEmailVerified) {
       return res.status(403).json({
         message: "Email not verified",
         verificationRequired: true,
