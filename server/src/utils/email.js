@@ -6,7 +6,11 @@ if (!process.env.SENDGRID_API_KEY) {
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const FROM_EMAIL = process.env.FROM_EMAIL || "no-reply@arys-bilim.com";
+const FROM_EMAIL = process.env.FROM_EMAIL;
+
+if (!FROM_EMAIL) {
+  throw new Error("FROM_EMAIL is missing");
+}
 
 const sendVerificationCodeEmail = async (toEmail, code) => {
   await sgMail.send({
