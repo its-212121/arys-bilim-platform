@@ -19,6 +19,15 @@ const genCode6 = () => String(Math.floor(100000 + Math.random() * 900000));
 const hashCode = (code) =>
   crypto.createHash("sha256").update(String(code)).digest("hex");
 
+const sendEmailWithTimeout = async (toEmail, code) => {
+  await Promise.race([
+    sendVerificationCodeEmail(toEmail, code),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Email sending timeout")), 8000)
+    ),
+  ]);
+};
+
 router.post("/register", async (req, res) => {
   try {
     const { name, fullName, email, password } = req.body;
@@ -52,7 +61,14 @@ router.post("/register", async (req, res) => {
       existing.verificationCodeExpires = expires;
       await existing.save();
 
-      await sendVerificationCodeEmail(emailNorm, code);
+      try {
+        await sendEmailWithTimeout(emailNorm, code);
+      } catch (e) {
+        return res.status(500).json({
+          message:
+            "Failed to send verification email. Check SMTP_USER/SMTP_PASS in Render.",
+        });
+      }
 
       return res.status(200).json({
         message: "Verification code sent to email",
@@ -71,7 +87,14 @@ router.post("/register", async (req, res) => {
       verificationCodeExpires: expires,
     });
 
-    await sendVerificationCodeEmail(emailNorm, code);
+    try {
+      await sendEmailWithTimeout(emailNorm, code);
+    } catch (e) {
+      return res.status(500).json({
+        message:
+          "Failed to send verification email. Check SMTP_USER/SMTP_PASS in Render.",
+      });
+    }
 
     return res.status(201).json({
       message: "Verification code sent to email",
@@ -144,7 +167,14 @@ router.post("/resend-code", async (req, res) => {
     user.verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    await sendVerificationCodeEmail(emailNorm, code);
+    try {
+      await sendEmailWithTimeout(emailNorm, code);
+    } catch (e) {
+      return res.status(500).json({
+        message:
+          "Failed to send verification email. Check SMTP_USER/SMTP_PASS in Render.",
+      });
+    }
 
     return res.json({ message: "Verification code resent" });
   } catch (e) {
@@ -186,3 +216,4 @@ router.post("/login", async (req, res) => {
 });
 
 module.exports = router;
+  
