@@ -22,7 +22,9 @@ export default function App() {
 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
+
+      <Route path="/verify-code" element={<VerifyEmail />} />
+      <Route path="/verify-email" element={<Navigate to="/verify-code" replace />} />
 
       <Route path="/portfolio/:userId" element={<PublicPortfolio />} />
 
