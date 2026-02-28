@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://arys-bilim-platform.onrender.com";
+const API_URL = (import.meta.env.VITE_API_URL || "https://arys-bilim-platform.onrender.com").replace(/\/$/, "");
 
 export default function Register() {
   const navigate = useNavigate();
@@ -30,11 +30,10 @@ export default function Register() {
 
       if (!res.ok) {
         setError(data?.message || "Registration failed");
-        setLoading(false);
         return;
       }
 
-      navigate(`/verify-code?email=${encodeURIComponent(data?.email || email)}`);
+      navigate(`/verify-email?email=${encodeURIComponent(data?.email || email)}`);
     } catch {
       setError("Failed to connect to server");
     } finally {
@@ -99,11 +98,7 @@ export default function Register() {
         </form>
 
         <div className="mt-4 flex justify-between text-sm">
-          <button
-            onClick={() => navigate("/login")}
-            className="text-blue-600 hover:underline"
-            type="button"
-          >
+          <button onClick={() => navigate("/login")} className="text-blue-600 hover:underline" type="button">
             I already have an account
           </button>
         </div>
