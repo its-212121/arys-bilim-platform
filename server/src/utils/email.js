@@ -1,19 +1,17 @@
-const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+if (!process.env.SENDGRID_API_KEY) {
+  throw new Error("SENDGRID_API_KEY is missing");
+}
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+const FROM_EMAIL = process.env.FROM_EMAIL || "no-reply@arys-bilim.com";
 
 const sendVerificationCodeEmail = async (toEmail, code) => {
-  await transporter.sendMail({
-    from: process.env.SMTP_USER,
+  await sgMail.send({
     to: toEmail,
+    from: FROM_EMAIL,
     subject: "Arys-BIL Verification Code",
     text: `Your verification code: ${code}\nThis code expires in 10 minutes.`,
   });
