@@ -12,11 +12,12 @@ const portfolioRoutes = require("./routes/portfolio");
 const graduatesRoutes = require("./routes/graduates");
 const adminRoutes = require("./routes/admin");
 
+const { seedAdmin } = require("./seedAdmin");
+
 const app = express();
 
 const allowedOrigins = [
   "https://arys-bilim-platform-1.onrender.com",
-  "https://arys-bilim-platform.onrender.com",
 ];
 
 const corsOptions = {
@@ -58,7 +59,11 @@ const port = process.env.PORT || 4000;
   try {
     if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is missing");
     if (!process.env.MONGO_URI) throw new Error("MONGO_URI is missing");
+
     await connectDB(process.env.MONGO_URI);
+
+    await seedAdmin();
+
     app.listen(port, () => console.log(`✅ Server running on port ${port}`));
   } catch (e) {
     console.error("❌ Server failed to start:", e.message);
