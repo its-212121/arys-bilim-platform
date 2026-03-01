@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import logo from "../assets/school-logo.jpg";
 
 type SeriesKey = "SAT" | "IELTS" | "UNT";
 
@@ -37,7 +39,7 @@ function Section({
   id: string;
   title: string;
   subtitle?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const { ref, visible } = useInViewOnce(0.12);
 
@@ -54,7 +56,9 @@ function Section({
       >
         <div className="mb-5">
           <h2 className="text-xl md:text-2xl font-bold text-slate-900">{title}</h2>
-          {subtitle ? <p className="text-sm md:text-base text-slate-500 mt-1">{subtitle}</p> : null}
+          {subtitle ? (
+            <p className="text-sm md:text-base text-slate-500 mt-1">{subtitle}</p>
+          ) : null}
         </div>
         {children}
       </div>
@@ -109,8 +113,20 @@ function SimpleLineChart({
   return (
     <div className="w-full overflow-hidden">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
-        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="rgba(15,23,42,0.15)" />
-        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="rgba(15,23,42,0.15)" />
+        <line
+          x1={padding}
+          y1={height - padding}
+          x2={width - padding}
+          y2={height - padding}
+          stroke="rgba(15,23,42,0.15)"
+        />
+        <line
+          x1={padding}
+          y1={padding}
+          x2={padding}
+          y2={height - padding}
+          stroke="rgba(15,23,42,0.15)"
+        />
 
         <polygon points={area} fill="rgba(37, 99, 235, 0.10)" />
 
@@ -125,8 +141,21 @@ function SimpleLineChart({
 
         {series.map((s, i) => (
           <g key={s.label}>
-            <circle cx={scaleX(i)} cy={scaleY(s.value)} r="5" fill="white" stroke="rgba(37, 99, 235, 0.95)" strokeWidth="3" />
-            <text x={scaleX(i)} y={height - 10} textAnchor="middle" fontSize="12" fill="rgba(15,23,42,0.65)">
+            <circle
+              cx={scaleX(i)}
+              cy={scaleY(s.value)}
+              r="5"
+              fill="white"
+              stroke="rgba(37, 99, 235, 0.95)"
+              strokeWidth="3"
+            />
+            <text
+              x={scaleX(i)}
+              y={height - 10}
+              textAnchor="middle"
+              fontSize="12"
+              fill="rgba(15,23,42,0.65)"
+            >
               {s.label}
             </text>
           </g>
@@ -257,12 +286,17 @@ function OrgTreeDemo() {
         <div className="text-sm font-semibold text-slate-900 mb-2">Teachers (demo)</div>
         <div className="flex flex-wrap gap-2">
           {teachers.map((t) => (
-            <span key={t} className="text-xs rounded-full border px-3 py-1 bg-slate-50 text-slate-700">
+            <span
+              key={t}
+              className="text-xs rounded-full border px-3 py-1 bg-slate-50 text-slate-700"
+            >
               {t}
             </span>
           ))}
         </div>
-        <div className="text-xs text-slate-500 mt-3">Потом заменим на реальных учителей/отделы и сделаем “ветки” глубже.</div>
+        <div className="text-xs text-slate-500 mt-3">
+          Потом заменим на реальных учителей/отделы и сделаем “ветки” глубже.
+        </div>
       </div>
     </div>
   );
@@ -323,17 +357,14 @@ export default function Dashboard() {
           <div className="flex items-center gap-5">
             <div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-white/10 border border-white/15 overflow-hidden flex items-center justify-center">
               <img
-                src="/school-logo.jpg"
+                src={logo}
                 alt="School logo"
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  const t = e.currentTarget;
-                  t.style.display = "none";
+                  e.currentTarget.style.display = "none";
                 }}
               />
-              <span className="text-xs text-white/70 px-2 text-center">
-                (logo)
-              </span>
+              <span className="text-xs text-white/70 px-2 text-center">(logo)</span>
             </div>
 
             <div>
@@ -363,11 +394,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-8 max-w-6xl mx-auto px-4 pb-16">
-        <Section
-          id="intro"
-          title="1) Мектеп логотипі + қысқа мәтін"
-          subtitle="Kazakh intro text"
-        >
+        <Section id="intro" title="1) Мектеп логотипі + қысқа мәтін" subtitle="Kazakh intro text">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
             <div className="lg:col-span-2">
               <p className="text-slate-700 leading-relaxed">
@@ -393,11 +420,7 @@ export default function Dashboard() {
                   ["#map", "Карта"],
                   ["#contacts", "Байланыс"],
                 ].map(([href, label]) => (
-                  <a
-                    key={href}
-                    href={href}
-                    className="rounded-lg border bg-white px-3 py-2 hover:bg-slate-50 transition"
-                  >
+                  <a key={href} href={href} className="rounded-lg border bg-white px-3 py-2 hover:bg-slate-50 transition">
                     {label}
                   </a>
                 ))}
@@ -409,11 +432,7 @@ export default function Dashboard() {
           </div>
         </Section>
 
-        <Section
-          id="history1"
-          title="2) Мектеп тарихы (1-бөлім)"
-          subtitle="Берілген фактілермен, ал нақты сандарды кейін толтырамыз"
-        >
+        <Section id="history1" title="2) Мектеп тарихы (1-бөлім)" subtitle="Берілген фактілермен, ал нақты сандарды кейін толтырамыз">
           <div className="space-y-3 text-slate-700 leading-relaxed">
             <p>
               Мектеп <b>2022</b> жылы ашылды. Алғашқы жылдары мектепте негізінен <b>7–8 сынып</b> оқушылары болды.
@@ -436,11 +455,7 @@ export default function Dashboard() {
           </div>
         </Section>
 
-        <Section
-          id="history2"
-          title="3) Тарих (2-бөлім): инфрақұрылым"
-          subtitle="спорт, алаң, акт залы — мәтін кейін нақтылап өңдейміз"
-        >
+        <Section id="history2" title="3) Тарих (2-бөлім): инфрақұрылым" subtitle="спорт, алаң, акт залы — мәтін кейін нақтылап өңдейміз">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-3 text-slate-700 leading-relaxed">
               <p>
@@ -469,19 +484,11 @@ export default function Dashboard() {
           </div>
         </Section>
 
-        <Section
-          id="org"
-          title="4) Мектеп құрылымы (дерево)"
-          subtitle="Қазір demo. Кейін нақты адамдарды енгіземіз"
-        >
+        <Section id="org" title="4) Мектеп құрылымы (дерево)" subtitle="Қазір demo. Кейін нақты адамдарды енгіземіз">
           <OrgTreeDemo />
         </Section>
 
-        <Section
-          id="stats"
-          title="5) Түлектер статистикасы (SAT / IELTS / UNT)"
-          subtitle="Кнопкалармен ауысады — кейін нақты деректермен толтырамыз"
-        >
+        <Section id="stats" title="5) Түлектер статистикасы (SAT / IELTS / UNT)" subtitle="Кнопкалармен ауысады — кейін нақты деректермен толтырамыз">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-2">
               {(["SAT", "IELTS", "UNT"] as SeriesKey[]).map((k) => {
@@ -503,9 +510,7 @@ export default function Dashboard() {
             </div>
 
             <div className="rounded-xl border bg-white p-4">
-              <div className="text-sm text-slate-500 mb-3">
-                Graduates progress · {tab}
-              </div>
+              <div className="text-sm text-slate-500 mb-3">Graduates progress · {tab}</div>
               <SimpleLineChart series={seriesByTab[tab]} />
               <div className="text-xs text-slate-500 mt-3">
                 Деректер demo. Сен нақты сандарды берсең — графикті 1:1 нақтылап жасаймын.
@@ -514,19 +519,11 @@ export default function Dashboard() {
           </div>
         </Section>
 
-        <Section
-          id="map"
-          title="6) Әлем картасы: түлектер қайда түсті"
-          subtitle="Қазір lite карта-заглушка + тізім. Кейін интерактив жасаймыз"
-        >
+        <Section id="map" title="6) Әлем картасы: түлектер қайда түсті" subtitle="Қазір lite карта-заглушка + тізім. Кейін интерактив жасаймыз">
           <WorldMapLite highlights={destinations} />
         </Section>
 
-        <Section
-          id="contacts"
-          title="7) Біз туралы / Байланыс"
-          subtitle="Контактілерді кейін сен жібересің — қазір placeholder"
-        >
+        <Section id="contacts" title="7) Біз туралы / Байланыс" subtitle="Контактілерді кейін сен жібересің — қазір placeholder">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="rounded-xl border bg-white p-4">
               <div className="text-xs text-slate-500">Instagram</div>
@@ -548,9 +545,7 @@ export default function Dashboard() {
           </div>
         </Section>
 
-        <div className="text-center text-xs text-slate-400 pt-8">
-          Arys Bilim Platform · Home page (demo)
-        </div>
+        <div className="text-center text-xs text-slate-400 pt-8">Arys Bilim Platform · Home page (demo)</div>
       </div>
     </div>
   );
